@@ -1,0 +1,123 @@
+from random import randint
+import sympy
+import sys
+
+sys.setrecursionlimit(10000) #递归深度设置为10000，防止递归深度不够
+
+# 判定a,b是否互质
+def gcd(a, b):
+    while a != 0:
+        a, b = b % a, a
+    return b
+
+
+# 这个扩展欧几里得算法求模逆(逆元)
+def findModReverse(a, m):
+
+    if gcd(a, m) != 1:
+        return None
+    u1, u2, u3 = 1, 0, a
+    v1, v2, v3 = 0, 1, m
+    while v3 != 0:
+        q = u3 // v3
+        v1, v2, v3, u1, u2, u3 = (u1 - q * v1), (u2 - q * v2), (u3 - q * v3), v1, v2, v3
+    return u1 % m
+#快速取模幂
+def fastExpMod(a, e, m):
+    a = a % m
+    res = 1
+    while e != 0:
+        if e&1:
+            res = (res * a) % m
+        e >>= 1 #右移一位
+        a = (a * a) % m
+    return res
+
+#生成原根
+def primitive_element(p, q):
+
+    while True:
+        g = randint(2, p - 2)
+        if fastExpMod(g, 2, p) != 1 and fastExpMod(g, q, p) != 1:
+            return g
+#1.gcd 2.a^-1 mod b 3.b^-1 mod a
+def e_gcd(a, b):
+    if b == 0:
+        return a, 1, 0
+    g, x, y = e_gcd(b, a%b)
+    return g, y, x-a//b*y
+# Data Owner 给关键词加密
+def Encryptkeyword(p, g, C,A, m):
+
+    r1 = randint(2, p-2)
+
+    print("r1:",r1)
+    C_w = (fastExpMod(C, m, p)*fastExpMod(A, r1, p))%p
+    R = fastExpMod(g, r1, p)
+    return C_w, R
+# 生成Trapdoor
+def Trapdoor(p, g, c,A,m2):
+
+    r2 = randint(2, p-2)
+
+    print("r2:",r2)
+    y=fastExpMod(A, m2, p)
+    T_w = (fastExpMod(y, c, p)*fastExpMod(A, r2, p))%p
+    M = fastExpMod(g, r2, p)
+    return T_w,M
+
+# 验证Test (𝑪_𝒘∙ 𝑹^(−𝒂))^a = 〖 𝑻〗_𝒘 𝑴^(−𝒂)
+def Test(p, g, C_w,T_w, R,M,a):
+    v = fastExpMod(R, a, p)
+    #v1 = e_gcd(v, p)[1]
+    v1=findModReverse(v,p)
+
+    print("v1:",v1)
+    print("R:",R)
+    Mod=(R*v1)%p
+    print("Mod:",Mod)
+    Left_v = fastExpMod(C_w*v1,a,p)
+    x = fastExpMod(M, a, p)
+    Right_v = (T_w * findModReverse(x,p))% p
+    print("Left_v:",Left_v)
+    print("Right_v:",Right_v)
+    if Left_v==Right_v:
+        print("They are the same!")
+    else:
+        print("Nooooooooooo!")
+
+
+def main():
+    m =1234
+    m2=1234
+    while True:
+        q = sympy.randprime(10**50, 10**51) #使得p也在150位
+        if sympy.isprime(q):
+            p = 2 * q + 1
+            if len(str(p)) == 51 and sympy.isprime(p):
+                break
+    g = primitive_element(p, q)
+    a = randint(2, p-2)
+    b = randint(2, p-2)
+    c = randint(2, p-2)
+    print("p:",p)
+    print("g:",g)
+    print("a:",a)
+    print("c:",c)
+
+    C = fastExpMod(g, c, p)
+    A = fastExpMod(g, a, p)
+    print("C:",C)
+    print("A:",A)
+    C_w,R=Encryptkeyword(p, g, C,A, m)
+    T_w,M = Trapdoor(p, g, c,A,m2)
+    print("C_w:",C_w)
+    print("R:",R)
+    print("T_w:",T_w)
+    print("M:",M)
+
+    Test(p, g, C_w, T_w, R, M, a)
+
+
+if __name__ == '__main__':
+    main()
